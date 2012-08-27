@@ -2,7 +2,7 @@ source "http://rubygems.org"
 # Add dependencies required to use your gem here.
 # Example:
 #   gem "activesupport", ">= 2.3.5"
-gem 'wwood-reach'
+gem 'reachable'
 gem 'bio-logger'
 
 # Add dependencies to develop your gem here.
