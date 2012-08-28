@@ -28,6 +28,9 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     opts.on("-m", "--mince MINCE_OUTPUT", "Output from mince.rb [required]") do |arg|
       options[:mince_file] = arg
     end
+    opts.on("--img-basedir DIRECTORY", "Base directory to IMG fasta files [default: #{options[:img_basedir]}]") do |arg|
+      options[:img_basedir] = arg
+    end
     
     # logger options
     opts.on("-q", "--quiet", "Run quietly, set logging to ERROR level [default INFO]") {Bio::Log::CLI.trace('error')}
@@ -35,7 +38,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     opts.on("--trace options",String,"Set log level [default INFO]. e.g. '--trace debug' to set logging level to DEBUG"){|s| Bio::Log::CLI.trace(s)}
   end
   o.parse!
-  if ARGV.length != 0 or options[:mince_file].nil?
+  if ARGV.length != 0 or options[:mince_file].nil? or options[:img_basedir].nil?
     $stderr.puts o
     exit 1
   end
@@ -49,6 +52,8 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
         abundance = row[0].to_f
         img_identifier = row[1]
         raise unless img_identifier.match(/^\d+$/)
+        
+        next if abundance == 0.0 #Not strictly necessary, but grinder runs faster without it
         
         # Concatenate the fna file from that OTU into the references.fna file, and output the abundances
         fasta = Bio::FlatFile.foreach(File.join(options[:img_basedir],img_identifier,"#{img_identifier}.fna")) do |seq|

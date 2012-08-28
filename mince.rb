@@ -58,27 +58,30 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   sequenced_genomes = File.open(options[:sequenced_genomes_taxonomy]).readlines
   sequenced_genomes = sequenced_genomes.compact.reach.strip.to_a
   
+  # Remove from the table all except the samples to be processed
   log.info "Using abundances from samples #{options[:otu_table_columns].join(",")}"
-  options[:otu_table_columns].each do |sample_column_index|
-    sample = table.samples.keys[sample_column_index] #just take the first one
-    log.info "Using abundances from column #{sample_column_index} (#{sample})"
+  samples_to_keep_names = options[:otu_table_columns].collect{|i| table.samples.keys[i]}
+  table.samples = table.samples.select do |name, abundances|
+    samples_to_keep_names.include? name
+  end
+  table.remove_empty_rows!
+  log.debug "After trimming the OTU table down, the OTU table has these samples: #{table.samples.keys.join(', ')}, and #{table.otu_identifiers.length} OTUs"
+  
+  # Assign abundances to each of the OTU ids available in the table
+  sequenced_genomes.shuffle!
+  if table.otu_identifiers.length > sequenced_genomes.length
+    raise "There are more OTUs in the OTU table (#{table.otu_identifiers.length}) than genomes available for modelling (#{sequenced_genomes.length}), so quitting. Get more!"
+  end
+  assigned_genomes = sequenced_genomes[0...table.otu_identifiers.length]
+  
+  table.samples.each do |sample, sample_abundances|
+    log.info "Now writing abundances from sample #{sample}"
     
-    all_abundances = table.samples[sample]
-    sample_abundances = all_abundances.collect{|s| s.to_f}.reject{|s| s==0}.sort{|a,b| b<=>a}
-    
-    if sample_abundances.length > sequenced_genomes.length
-      log.warn "There are more samples than possibilties for sequencing, so truncating the list of output genomes"
-      sample_abundances = sample_abundances[0...sequenced_genomes.length]
-    end
-    log.info "Outputing abundances for #{sample_abundances.length} different OTUs from this sample"
-    
-    # Print the ID, and abundance
-    sequenced_genomes.shuffle! #randomising this array means
     File.open("abundances.#{sample}.csv",'w') do |f|
       sample_abundances.each_with_index do |abundance, i|
         f.puts [
           abundance,
-          sequenced_genomes[i],
+          assigned_genomes[i],
         ].join("\t")
       end
     end
