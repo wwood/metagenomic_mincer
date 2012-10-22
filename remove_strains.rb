@@ -61,20 +61,23 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   log.info "After removing different strains of the same species, #{taxonomies.length} different species were left"
   
   # Headers
-  puts %w(taxon_oid
-Domain
-Status
-Genome Name
-Phylum
-Class
-Order
-Family
-Genus
-Species
-Strain
-Release Date
-IMG Release
-).join("\t")
+  headers = [
+    'taxon_oid',
+    'Domain',
+    'Status',
+    'Genome Name',
+    'Phylum',
+    'Class',
+    'Order',
+    'Family',
+    'Genus',
+    'Species',
+    'Strain',
+    'Release Date',
+    'IMG Release'
+  ]
+  puts headers.join("\t")
+  
   # Data
   taxonomies.each do |lineage|
     puts lineage.definition_line
