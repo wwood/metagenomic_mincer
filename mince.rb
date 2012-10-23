@@ -111,7 +111,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     samples_to_keep_names.include? name
   end
   table.remove_empty_rows!
-  log.debug "After trimming the OTU table down, the OTU table has these samples: #{table.samples.keys.join(', ')}, and #{table.otu_identifiers.length} OTUs"
+  log.debug "After trimming the OTU table down to remove species not present, the OTU table has these samples: #{table.samples.keys.join(', ')}, and #{table.otu_identifiers.length} OTUs"
   
   # Add in the spike-ins. First need to know the median, Q1, Q3
   median_abundances = {}
@@ -120,10 +120,8 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   table.samples.each do |sample, abundances|
     q1_abundances[sample], median_abundances[sample], q3_abundances[sample] = abundances.low_medium_high_abundance
     
-    log.info "For sample '#{sample}', found q1,median,q3 abundances #{q1_abundances[sample]}, #{median_abundances[sample]}, #{q3_abundances[sample]}"
+    log.info "For sample '#{sample}', found low,medium,high abundances #{q1_abundances[sample]}, #{median_abundances[sample]}, #{q3_abundances[sample]}"
   end
-  pp median_abundances
-  pp q1_abundances
   
   spiking_in = false
   if (options[:same_genus1] or options[:same_genus2] or options[:different_orders1])
@@ -134,6 +132,10 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   end
   
   spike_ins = {}# IMG-definition => {sample => abundances}
+  sample_names = table.sample_names
+  sample_names.each do |name|
+    spike_ins[name] = {}
+  end
   
   # Take a random genus and include exactly 2 species, with coverage profiles up,middle,up vs. down,middle,down
   if options[:same_genus1]
@@ -144,17 +146,16 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     random_species1 = possible_species_to_spike_in[0]
     random_species2 = possible_species_to_spike_in[1]
     
+    log.info "Spiking in #{random_species1.genus_species} and #{random_species2.genus_species} for spike in #1"
+    
     # Assign the spiked-in abundances
-    spikes1 = {}
-    spikes1[table.samples[0]] = q3_abundances[table.samples[0]]
-    spikes1[table.samples[1]] = median_abundances[table.samples[1]]
-    spikes1[table.samples[2]] = q3_abundances[table.samples[2]]
-    spike_ins[random_species1] = spikes1
-    spikes2 = {}
-    spikes2[table.samples[0]] = q1_abundances[table.samples[0]]
-    spikes2[table.samples[1]] = median_abundances[table.samples[1]]
-    spikes2[table.samples[2]] = q1_abundances[table.samples[2]]
-    spike_ins[random_species2] = spikes2
+    spike_ins[sample_names[0]][random_species1] = q3_abundances[sample_names[0]]
+    spike_ins[sample_names[1]][random_species1] = median_abundances[sample_names[1]]
+    spike_ins[sample_names[2]][random_species1] = q3_abundances[sample_names[2]]
+    
+    spike_ins[sample_names[0]][random_species2] = q1_abundances[sample_names[0]]
+    spike_ins[sample_names[1]][random_species2] = median_abundances[sample_names[1]]
+    spike_ins[sample_names[2]][random_species2] = q1_abundances[sample_names[2]]
     
     # Remove anything from that genus to the abundances file
     sequenced_genomes.reject! do |tax|
@@ -172,17 +173,16 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     random_species1 = possible_species_to_spike_in[0]
     random_species2 = possible_species_to_spike_in[1]
     
+    log.info "Spiking in #{random_species1.genus_species} and #{random_species2.genus_species} for spike in #2"
+    
     # Assign the spiked-in abundances
-    spikes1 = {}
-    spikes1[table.samples[0]] = median_abundances[table.samples[0]]
-    spikes1[table.samples[1]] = median_abundances[table.samples[1]]
-    spikes1[table.samples[2]] = q3_abundances[table.samples[2]]
-    spike_ins[random_species1] = spikes1
-    spikes2 = {}
-    spikes2[table.samples[0]] = median_abundances[table.samples[0]]
-    spikes2[table.samples[1]] = median_abundances[table.samples[1]]
-    spikes2[table.samples[2]] = q1_abundances[table.samples[2]]
-    spike_ins[random_species2] = spikes2
+    spike_ins[sample_names[0]][random_species1] = median_abundances[sample_names[0]]
+    spike_ins[sample_names[1]][random_species1] = median_abundances[sample_names[1]]
+    spike_ins[sample_names[2]][random_species1] = q3_abundances[table.samples[2]]
+    
+    spike_ins[sample_names[0]][random_species2] = median_abundances[sample_names[0]]
+    spike_ins[sample_names[1]][random_species2] = median_abundances[sample_names[1]]
+    spike_ins[sample_names[2]][random_species2] = q1_abundances[sample_names[2]]
     
     # Remove anything from that genus to the abundances file
     sequenced_genomes.reject! do |tax|
@@ -195,17 +195,16 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     random_order1, random_order2 = sequenced_genomes.get_two_random_orders
     log.info "Chose random orders #{random_order1} and #{random_order2} for options[:different_orders]"
     
+    log.info "Spiking in #{random_species1.genus_species} and #{random_species2.genus_species} for spike in #3"
+    
     # Assign the spiked-in abundances
-    spikes1 = {}
-    spikes1[table.samples[0]] = median_abundances[table.samples[0]]
-    spikes1[table.samples[1]] = median_abundances[table.samples[1]]
-    spikes1[table.samples[2]] = median_abundances[table.samples[2]]
-    spike_ins[random_species1] = spikes1
-    spikes2 = {}
-    spikes2[table.samples[0]] = median_abundances[table.samples[0]]
-    spikes2[table.samples[1]] = median_abundances[table.samples[1]]
-    spikes2[table.samples[2]] = median_abundances[table.samples[2]]
-    spike_ins[random_species2] = spikes2   
+    spike_ins[sample_names[0]][random_species1] = median_abundances[sample_names[0]]
+    spike_ins[sample_names[1]][random_species1] = median_abundances[sample_names[1]]
+    spike_ins[sample_names[2]][random_species1] = median_abundances[sample_names[2]]
+    
+    spike_ins[sample_names[0]][random_species2] = median_abundances[sample_names[0]]
+    spike_ins[sample_names[1]][random_species2] = median_abundances[sample_names[1]]
+    spike_ins[sample_names[2]][random_species2] = median_abundances[sample_names[2]]
     
     # Remove anything from that genus to the abundances file
     sequenced_genomes.reject! do |tax|
@@ -213,6 +212,8 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     end
   end
   log.info "After the spike-ins, there are #{sequenced_genomes.length} different OTUs available for random modelling"
+  
+  pp spike_ins
   
   # Assign the rest of the abundances to each of the OTU ids available in the table
   sequenced_genomes.shuffle!
@@ -230,7 +231,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
       spike_ins[sample].each do |taxon, abundance|
         f.puts [
           abundance,
-          taxon
+          taxon.definition_line
         ].join("\t")
       end
       
@@ -238,7 +239,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
       sample_abundances.each_with_index do |abundance, i|
         f.puts [
           abundance,
-          assigned_genomes[i],
+          assigned_genomes[i].definition_line,
         ].join("\t")
       end
     end
