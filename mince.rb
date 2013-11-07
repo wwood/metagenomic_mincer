@@ -5,8 +5,8 @@ require 'bio-logger'
 require 'reachable'
 require 'pp'
  
-$:.push File.join(File.dirname(__FILE__),'..','bioruby-iotu','lib')
-require 'bio-iotu' #Has OtuTable class
+$:.push File.join(File.dirname(__FILE__),'..','bioruby-otu_table','lib')
+require 'bio-otu_table' #Has OtuTable class
 
 $:.push File.join(File.dirname(__FILE__),'..','bioruby-taxonomy_definition_files','lib')
 require 'bio-taxonomy_definition_files'
@@ -194,6 +194,9 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   if options[:different_orders1]
     random_order1, random_order2 = sequenced_genomes.get_two_random_orders
     log.info "Chose random orders #{random_order1} and #{random_order2} for options[:different_orders]"
+    
+    random_species1 = sequenced_genomes.select{|g| g.order==random_order1}.sample
+    random_species2 = sequenced_genomes.select{|g| g.order==random_order2}.sample
     
     log.info "Spiking in #{random_species1.genus_species} and #{random_species2.genus_species} for spike in #3"
     

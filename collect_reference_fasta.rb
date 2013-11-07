@@ -4,6 +4,7 @@ require 'optparse'
 require 'bio-logger'
 require 'csv'
 require 'bio'
+require 'progressbar'
 
 $:.push File.join(File.dirname(__FILE__),'..','bioruby-iotu','lib')
 require 'bio-iotu' #Has OtuTable class
@@ -47,7 +48,9 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   
   File.open(options[:out_fasta],'w') do |out_fasta|
     File.open(options[:out_abundances],'w') do |out_abundances|
+      #progress = ProgressBar.new('collect', `wc -l #{options[:mince_file]}`.to_i)
       CSV.foreach(options[:mince_file], :col_sep => "\t") do |row|
+       # progress.inc
         raise unless row.length > 1
         abundance = row[0].to_f
         img_identifier = row[1]
@@ -56,14 +59,18 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
         next if abundance == 0.0 #Not strictly necessary, but grinder runs faster without it
         
         # Concatenate the fna file from that OTU into the references.fna file, and output the abundances
-        fasta = Bio::FlatFile.foreach(File.join(options[:img_basedir],img_identifier,"#{img_identifier}.fna")) do |seq|
+        seqs = Bio::FlatFile.open(File.join(options[:img_basedir],img_identifier,"#{img_identifier}.fna")).entries
+        total_length = seqs.inject(0){|total,seq| total+=seq.seq.length}
+        log.debug "From #{row[1]}, found #{seqs.length} sequences totalling #{total_length} bases"
+        seqs.each do |seq|
           out_fasta.puts seq.entry
           out_abundances.puts [
             seq.definition.split(/\s/)[0],
-            abundance,
+            abundance*seq.seq.length/total_length,
           ].join(' ')
         end
       end
+     # progress.finish
     end
   end
 end #end if running as a script

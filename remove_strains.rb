@@ -15,12 +15,15 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   }
   o = OptionParser.new do |opts|
     opts.banner = "
-      Usage: #{SCRIPT_NAME} <arguments>
+      Usage: #{SCRIPT_NAME}
       
       Takes in an IMG taxonomy file, and removes from it all but one strain from each species\n\n"
       
     opts.on("-t", "--img-taxonomies-file PATH", "Path to IMG taxonomy file i.e. IMG3.5_release_metadata.tsv [required].") do |arg|
       options[:full_img_taxonomies_file] = arg
+    end
+    opts.on("--t2", "--img-taxonomies-file2 PATH", "2nd (less likely) path to IMG taxonomy file i.e. IMG3.5_release_metadata.tsv [required].") do |arg|
+      options[:full_img_taxonomies_file2] = arg
     end
     
     # logger options
@@ -57,8 +60,28 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
       false
     end
   end
+  log.info "After removing different strains of the same species, #{taxonomies.length} different species were left (in the first taxonomy file)"
   
-  log.info "After removing different strains of the same species, #{taxonomies.length} different species were left"
+  if options[:full_img_taxonomies_file2]
+    taxonomies2 = Bio::IMG::TaxonomyDefinitionFile.read(options[:full_img_taxonomies_file2])
+    log.info "Read in #{taxonomies2.length} species to work with from the second file"
+    
+    # Randomise so that there is no biases in the order of this file. That's unlikely, but still, good to do.
+    taxonomies2.shuffle!
+    
+    taxonomies2.reject! do |lineage|
+      index = "#{lineage.genus}_#{lineage.species}"
+      if accepted_genus_species.include?(index)
+        true
+      else
+        accepted_genus_species.push index
+        false
+      end
+    end
+    taxonomies.push taxonomies2
+    taxonomies.flatten!
+    log.info "After removing different strains of the same species, #{taxonomies.length} different species were left (in the first and second taxonomy files combined)"
+  end
   
   # Headers
   headers = [
